@@ -20,6 +20,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private PaymentRepository paymentRepository;
     private StateMachineFactory<PaymentState, PaymentEvent> stateMachineFactory;
+    private final PaymentStateChangeInterceptor paymentStateChangeInterceptor;
 
     @Override
     public Payment newPayment(Payment payment) {
@@ -31,7 +32,6 @@ public class PaymentServiceImpl implements PaymentService {
     public StateMachine<PaymentState, PaymentEvent> preAuth(Long paymentId) {
 
         StateMachine<PaymentState, PaymentEvent> sm = build(paymentId);
-
         sendEvent(paymentId, sm, PaymentEvent.PRE_AUTHORIZE);
 
         return null;
@@ -41,7 +41,6 @@ public class PaymentServiceImpl implements PaymentService {
     public StateMachine<PaymentState, PaymentEvent> authorizePayment(Long paymentId) {
 
         StateMachine<PaymentState, PaymentEvent> sm = build(paymentId);
-
         sendEvent(paymentId, sm, PaymentEvent.AUTH_APPROVED);
 
         return null;
@@ -51,7 +50,6 @@ public class PaymentServiceImpl implements PaymentService {
     public StateMachine<PaymentState, PaymentEvent> declineAuth(Long paymentId) {
 
         StateMachine<PaymentState, PaymentEvent> sm = build(paymentId);
-
         sendEvent(paymentId, sm, PaymentEvent.AUTH_DECLINED);
 
         return null;
@@ -74,6 +72,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         sm.getStateMachineAccessor()
                 .doWithAllRegions(sma -> {
+                    sma.addStateMachineInterceptor(paymentStateChangeInterceptor);
                     sma.resetStateMachine(new DefaultStateMachineContext<>(payment.getState(), null, null, null));
                 });
 
